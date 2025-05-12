@@ -1,0 +1,27 @@
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import linear_kernel
+
+# Load data
+movies = pd.read_csv("data/movies.csv")
+
+# Fill NaNs and create TF-IDF matrix
+movies['genres'] = movies['genres'].fillna('')
+tfidf = TfidfVectorizer(stop_words='english')
+tfidf_matrix = tfidf.fit_transform(movies['genres'])
+
+# Compute cosine similarity
+cosine_sim = linear_kernel(tfidf_matrix, tfidf_matrix)
+
+# Build reverse map of indices
+indices = pd.Series(movies.index, index=movies['title']).drop_duplicates()
+
+def get_recommendations(title, n=10):
+    idx = indices.get(title)
+    if idx is None:
+        return []
+    sim_scores = list(enumerate(cosine_sim[idx]))
+    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)[1:n+1]
+    movie_indices = [i[0] for i in sim_scores]
+    return movies['title'].iloc[movie_indices].tolist()
+
